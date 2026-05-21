@@ -176,7 +176,8 @@ fig.text(0.5, 0.91, 'Una anomalía operativa: reciben menos vigilancia pese al r
 plt.tight_layout(rect=[0, 0, 1, 0.88])
 
 st.pyplot(fig)
-st.divider()col2.metric("Presupuesto total", f"${df['Presupuesto_USD'].sum():,}")
+st.divider()
+col2.metric("Presupuesto total", f"${df['Presupuesto_USD'].sum():,}")
 
 st.divider()
 
