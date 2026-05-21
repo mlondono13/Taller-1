@@ -90,6 +90,8 @@ with col_b:
 st.divider()
 
 # ── SECCIÓN ANOMALÍA ───────────────────────────────────────────────────────
+plt.close('all')  # ← limpia figuras anteriores
+
 st.title("¿Dónde están los proyectos que nadie vigila?")
 st.caption("Detección de anomalía · Contraste Figura-Fondo por nivel de impacto")
 st.divider()
@@ -107,25 +109,25 @@ orden = ['Alto', 'Medio', 'Bajo']
 imp['orden'] = imp['Nivel_Impacto'].map({v: i for i, v in enumerate(orden)})
 imp = imp.sort_values('orden').reset_index(drop=True)
 
-GRIS_A = '#B4B2A9'
-ROJO   = '#C81D25'
-BG_A   = '#F7F7F5'
-DARK   = '#1A202C'
-LIGHT  = '#718096'
+GRIS_A  = '#B4B2A9'
+ROJO    = '#C81D25'
+BG_A    = '#F7F7F5'
+DARK    = '#1A202C'
+LIGHT   = '#718096'
 VERDE_A = '#276749'
 
-# Métricas de contexto
-m1, m2, m3 = st.columns(3)
 tasa_alto  = imp.loc[imp['Nivel_Impacto'] == 'Alto',  'tasa'].values[0]
 tasa_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'tasa'].values[0]
 pres_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'presupuesto_M'].values[0]
+
+m1, m2, m3 = st.columns(3)
 m1.metric("Retrasos — Alto impacto",  f"{tasa_alto:.1f}%",  "referencia esperada")
 m2.metric("Retrasos — Medio impacto", f"{tasa_medio:.1f}%", f"+{tasa_medio - tasa_alto:.1f} pts ↑", delta_color="inverse")
 m3.metric("Presupuesto en riesgo",    f"USD {pres_medio:.0f}M", "proyectos de impacto Medio")
 
 st.divider()
 
-fig, ax = plt.subplots(figsize=(10, 5.5), facecolor=BG_A)
+fig_anomalia, ax = plt.subplots(figsize=(10, 5.5), facecolor=BG_A)  # ← nombre distinto
 ax.set_facecolor(BG_A)
 
 colores = [ROJO if row['Nivel_Impacto'] == 'Medio' else GRIS_A for _, row in imp.iterrows()]
@@ -169,77 +171,14 @@ ax.set_yticklabels(imp['Nivel_Impacto'], fontsize=11, color=DARK, fontweight='bo
 ax.xaxis.grid(True, color='#E2E8F0', lw=0.8, linestyle='--', zorder=0)
 ax.set_xlabel('% de proyectos retrasados', fontsize=9, color=LIGHT, labelpad=10)
 ax.set_ylabel('Nivel de Impacto', fontsize=9, color=LIGHT, labelpad=10)
-fig.suptitle('Los proyectos de impacto Medio presentan más retrasos que los de Alto impacto',
+fig_anomalia.suptitle(
+    'Los proyectos de impacto Medio presentan más retrasos que los de Alto impacto',
     fontsize=13, fontweight='bold', color=DARK, y=0.96)
-fig.text(0.5, 0.91, 'Una anomalía operativa: reciben menos vigilancia pese al riesgo financiero asociado',
+fig_anomalia.text(0.5, 0.91,
+    'Una anomalía operativa: reciben menos vigilancia pese al riesgo financiero asociado',
     ha='center', fontsize=9, color=LIGHT, style='italic')
 plt.tight_layout(rect=[0, 0, 1, 0.88])
 
-st.pyplot(fig)
+st.pyplot(fig_anomalia)  # ← figura correcta
 st.divider()
-col2.metric("Presupuesto total", f"${df['Presupuesto_USD'].sum():,}")
-
-st.divider()
-
-def limpiar_ax(ax):
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-    ax.tick_params(left=False, bottom=False)
-    ax.xaxis.grid(True, color=GRID, linewidth=0.8, zorder=0)
-    ax.set_axisbelow(True)
-    ax.set_facecolor(BG)
-
-# Layout: dos columnas
-col_a, col_b = st.columns(2)
-
-# Gráfica 1: ROI
-with col_a:
-    st.subheader("ROI Social")
-    st.caption("Personas beneficiadas por cada $1.000 invertidos · Mayor es mejor")
-
-    roi = stats.sort_values("ROI")
-    top_roi = roi["ROI"].nlargest(1).min()
-    colores_roi = [VERDE if v >= top_roi else GRIS for v in roi["ROI"]]
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    fig.patch.set_facecolor(BG)
-    bars = ax.barh(roi["Categoria"], roi["ROI"], color=colores_roi, height=0.5)
-    for bar, val in zip(bars, roi["ROI"]):
-        ax.text(bar.get_width() + 0.05, bar.get_y() + bar.get_height()/2,
-                f"{val:.2f}", va="center", fontsize=10, color=TEXTO)
-    for label, color in zip(ax.get_yticklabels(), colores_roi):
-        label.set_color(color)
-        if color == VERDE:
-            label.set_fontweight("bold")
-    limpiar_ax(ax)
-    ax.set_xlabel("Personas por $1.000", color=TEXTO, fontsize=10)
-    ax.set_xlim(6, roi["ROI"].max() + 0.6)
-    fig.tight_layout()
-    st.pyplot(fig)
-
-# Gráfica 2: Costo
-with col_b:
-    st.subheader("Costo por Beneficiario")
-    st.caption("Dólares invertidos por cada persona atendida · Menor es mejor")
-
-    costo = stats.sort_values("Costo")
-    top_costo = costo["Costo"].nlargest(1).min()
-    colores_costo = [NARANJA if v >= top_costo else GRIS for v in costo["Costo"]]
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    fig.patch.set_facecolor(BG)
-    bars = ax.barh(costo["Categoria"], costo["Costo"], color=colores_costo, height=0.5)
-    for bar, val in zip(bars, costo["Costo"]):
-        ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height()/2,
-                f"${val:.1f}", va="center", fontsize=10, color=TEXTO)
-    for label, color in zip(ax.get_yticklabels(), colores_costo):
-        label.set_color(color)
-        if color == NARANJA:
-            label.set_fontweight("bold")
-    limpiar_ax(ax)
-    ax.set_xlabel("USD por persona", color=TEXTO, fontsize=10)
-    ax.set_xlim(90, costo["Costo"].max() + 8)
-    fig.tight_layout()
-    st.pyplot(fig)
-
 st.divider()
