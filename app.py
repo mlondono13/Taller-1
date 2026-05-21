@@ -14,7 +14,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-df = pd.read_csv('/Users/marcelalondono/Downloads/dataset_evaluacion_unidad1.csv')
+df = pd.read_csv('dataset_evaluacion_unidad1.csv')
 stats = df.groupby("Categoria")[["Presupuesto_USD", "Poblacion_Beneficiada"]].sum().reset_index()
 stats["ROI"] = stats["Poblacion_Beneficiada"] / stats["Presupuesto_USD"] * 1000
 stats["Costo"] = stats["Presupuesto_USD"] / stats["Poblacion_Beneficiada"]
