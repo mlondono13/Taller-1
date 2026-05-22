@@ -1,184 +1,278 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.express as px
 
-st.set_page_config(page_title="Eficiencia por Categoría", layout="wide")
+# ── Configuración ──────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Taller Visualización · Unidad 1",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 st.markdown("""
 <style>
-    .block-container { padding-top: 2rem; }
-    .metric-card { background: #F8F8F7; border-radius: 10px; padding: 1rem 1.5rem; }
-    [data-testid="stMetricValue"] { font-size: 2.5rem; color: #FFFFFF; font-weight: bold; }
-    [data-testid="stMetricLabel"] { color: #FFFFFF; font-size: 1rem; font-weight: bold }
+    .block-container { padding-top: 1.5rem; }
+    [data-testid="stMetricValue"] { font-size: 2rem; font-weight: bold; }
+    [data-testid="stSidebar"] { background-color: #F7F7F5; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #F0F0EE;
+        border-radius: 8px 8px 0 0;
+        padding: 8px 20px;
+        font-weight: 600;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1D9E75 !important;
+        color: white !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-df = pd.read_csv('dataset_evaluacion_unidad1.csv')
-stats = df.groupby("Categoria")[["Presupuesto_USD", "Poblacion_Beneficiada"]].sum().reset_index()
-stats["ROI"] = stats["Poblacion_Beneficiada"] / stats["Presupuesto_USD"] * 1000
-stats["Costo"] = stats["Presupuesto_USD"] / stats["Poblacion_Beneficiada"]
-
-VERDE  = "#1D9E75"
+VERDE   = "#1D9E75"
 NARANJA = "#D85A30"
-GRIS   = "#B4B2A9"
-BG     = "#FFFFFF"
-GRID   = "#EBEBEB"
-TEXTO  = "#5F5E5A"
+ROJO    = "#C81D25"
+GRIS    = "#B4B2A9"
 
-st.title("¿Cuál categoría entrega más con menos?")
+@st.cache_data
+def cargar_datos():
+    df = pd.read_csv('dataset_evaluacion_unidad1.csv')
+    df['Fecha_Inicio'] = pd.to_datetime(df['Fecha_Inicio'])
+    return df
+
+df_original = cargar_datos()
+
+# ── Sidebar ────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.title("Filtros")
+    st.divider()
+    categorias = st.multiselect("Categoría",
+        options=sorted(df_original["Categoria"].unique()),
+        default=sorted(df_original["Categoria"].unique()))
+    regiones = st.multiselect("Región",
+        options=sorted(df_original["Region"].unique()),
+        default=sorted(df_original["Region"].unique()))
+    impactos = st.multiselect("Nivel de Impacto",
+        options=["Alto", "Medio", "Bajo"], default=["Alto", "Medio", "Bajo"])
+    st.divider()
+    st.caption("Taller Visualización de Datos · Unidad 1")
+
+df = df_original[
+    df_original["Categoria"].isin(categorias) &
+    df_original["Region"].isin(regiones) &
+    df_original["Nivel_Impacto"].isin(impactos)
+]
+
+# ── Header + KPIs ──────────────────────────────────────────────────────────
+st.title("📊 Dashboard · Análisis de Proyectos Nacionales")
+st.caption(f"Mostrando {len(df):,} de {len(df_original):,} proyectos según filtros activos")
 st.divider()
 
-col1, col2 = st.columns(2)
-col1.metric("Proyectos", len(df))
-col2.metric("Presupuesto total", f"${df['Presupuesto_USD'].sum():,}")
+retrasados = df[df['Estado'] == 'Retrasado']
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Total proyectos",       f"{len(df):,}")
+k2.metric("Presupuesto total",     f"USD {df['Presupuesto_USD'].sum()/1e6:.0f}M")
+k3.metric("Proyectos retrasados",  f"{len(retrasados):,}",
+          f"{len(retrasados)/len(df)*100:.1f}% del total", delta_color="inverse")
+k4.metric("Población beneficiada", f"{df['Poblacion_Beneficiada'].sum()/1e6:.1f}M personas")
 st.divider()
 
-def limpiar_ax(ax):
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-    ax.tick_params(left=False, bottom=False)
-    ax.xaxis.grid(True, color=GRID, linewidth=0.8, zorder=0)
-    ax.set_axisbelow(True)
-    ax.set_facecolor(BG)
+# ── Tabs ───────────────────────────────────────────────────────────────────
+tab1, tab2, tab3 = st.tabs([
+    "📈  Eficiencia por Categoría",
+    "⚠️  Detección de Anomalía",
+    "🔍  Explorador de Proyectos"
+])
 
-col_a, col_b = st.columns(2)
+# ══════════════════════════════════════════════════════════════════════════
+# TAB 1
+# ══════════════════════════════════════════════════════════════════════════
+with tab1:
+    st.subheader("¿Cuál categoría entrega más con menos?")
+    st.caption("Eficiencia social del portafolio · ROI y Costo por beneficiario")
+    st.divider()
 
-with col_a:
-    st.subheader("ROI Social")
-    st.caption("Personas beneficiadas por cada $1.000 invertidos · Mayor es mejor")
-    roi = stats.sort_values("ROI")
-    top_roi = roi["ROI"].nlargest(1).min()
-    colores_roi = [VERDE if v >= top_roi else GRIS for v in roi["ROI"]]
-    fig, ax = plt.subplots(figsize=(6, 4))
-    fig.patch.set_facecolor(BG)
-    bars = ax.barh(roi["Categoria"], roi["ROI"], color=colores_roi, height=0.5)
-    for bar, val in zip(bars, roi["ROI"]):
-        ax.text(bar.get_width() + 0.05, bar.get_y() + bar.get_height()/2,
-                f"{val:.2f}", va="center", fontsize=10, color=TEXTO)
-    for label, color in zip(ax.get_yticklabels(), colores_roi):
-        label.set_color(color)
-        if color == VERDE:
-            label.set_fontweight("bold")
-    limpiar_ax(ax)
-    ax.set_xlabel("Personas por $1.000", color=TEXTO, fontsize=10)
-    ax.set_xlim(6, roi["ROI"].max() + 0.6)
-    fig.tight_layout()
-    st.pyplot(fig)
+    stats = (df.groupby("Categoria")[["Presupuesto_USD", "Poblacion_Beneficiada"]]
+               .sum().reset_index())
+    stats["ROI"]   = stats["Poblacion_Beneficiada"] / stats["Presupuesto_USD"] * 1000
+    stats["Costo"] = stats["Presupuesto_USD"] / stats["Poblacion_Beneficiada"]
 
-with col_b:
-    st.subheader("Costo por Beneficiario")
-    st.caption("Dólares invertidos por cada persona atendida · Menor es mejor")
-    costo = stats.sort_values("Costo")
-    top_costo = costo["Costo"].nlargest(1).min()
-    colores_costo = [NARANJA if v >= top_costo else GRIS for v in costo["Costo"]]
-    fig, ax = plt.subplots(figsize=(6, 4))
-    fig.patch.set_facecolor(BG)
-    bars = ax.barh(costo["Categoria"], costo["Costo"], color=colores_costo, height=0.5)
-    for bar, val in zip(bars, costo["Costo"]):
-        ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height()/2,
-                f"${val:.1f}", va="center", fontsize=10, color=TEXTO)
-    for label, color in zip(ax.get_yticklabels(), colores_costo):
-        label.set_color(color)
-        if color == NARANJA:
-            label.set_fontweight("bold")
-    limpiar_ax(ax)
-    ax.set_xlabel("USD por persona", color=TEXTO, fontsize=10)
-    ax.set_xlim(90, costo["Costo"].max() + 8)
-    fig.tight_layout()
-    st.pyplot(fig)
+    col_a, col_b = st.columns(2)
 
-st.divider()
+    with col_a:
+        roi = stats.sort_values("ROI", ascending=True)
+        roi["color"] = [VERDE if v == roi["ROI"].max() else GRIS for v in roi["ROI"]]
+        fig_roi = go.Figure(go.Bar(
+            x=roi["ROI"], y=roi["Categoria"], orientation='h',
+            marker_color=roi["color"],
+            text=[f"{v:.2f}" for v in roi["ROI"]], textposition='outside',
+            hovertemplate="<b>%{y}</b><br>ROI: %{x:.2f} personas/$1.000<extra></extra>"
+        ))
+        fig_roi.update_layout(
+            title=dict(text="<b>Salud: más personas por dólar invertido</b>", font_size=14),
+            xaxis=dict(title="Personas por $1.000", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
+            yaxis=dict(showgrid=False),
+            plot_bgcolor="white", paper_bgcolor="white",
+            margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
+        )
+        st.plotly_chart(fig_roi, use_container_width=True)
 
-# ── SECCIÓN ANOMALÍA ───────────────────────────────────────────────────────
-plt.close('all')  # ← limpia figuras anteriores
+    with col_b:
+        costo = stats.sort_values("Costo", ascending=True)
+        costo["color"] = [NARANJA if v == costo["Costo"].max() else GRIS for v in costo["Costo"]]
+        fig_costo = go.Figure(go.Bar(
+            x=costo["Costo"], y=costo["Categoria"], orientation='h',
+            marker_color=costo["color"],
+            text=[f"${v:.1f}" for v in costo["Costo"]], textposition='outside',
+            hovertemplate="<b>%{y}</b><br>Costo: $%{x:.1f} por persona<extra></extra>"
+        ))
+        fig_costo.update_layout(
+            title=dict(text="<b>Tecnología: mayor costo por persona beneficiada</b>", font_size=14),
+            xaxis=dict(title="USD por beneficiario", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
+            yaxis=dict(showgrid=False),
+            plot_bgcolor="white", paper_bgcolor="white",
+            margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
+        )
+        st.plotly_chart(fig_costo, use_container_width=True)
 
-st.title("¿Dónde están los proyectos que nadie vigila?")
-st.caption("Detección de anomalía · Contraste Figura-Fondo por nivel de impacto")
-st.divider()
+    st.divider()
+    st.subheader("Mapa de eficiencia por categoría")
+    st.caption("Hover sobre cada burbuja · Tamaño = presupuesto total")
 
-imp = (
-    df.groupby('Nivel_Impacto')
-    .apply(lambda x: pd.Series({
-        'tasa': round((x['Estado'] == 'Retrasado').sum() / len(x) * 100, 1),
-        'n': len(x),
-        'presupuesto_M': round(x['Presupuesto_USD'].sum() / 1e6, 1)
-    }))
-    .reset_index()
-)
-orden = ['Alto', 'Medio', 'Bajo']
-imp['orden'] = imp['Nivel_Impacto'].map({v: i for i, v in enumerate(orden)})
-imp = imp.sort_values('orden').reset_index(drop=True)
+    stats["Presupuesto_M"] = stats["Presupuesto_USD"] / 1e6
+    fig_scatter = px.scatter(
+        stats, x="Costo", y="ROI", size="Presupuesto_M", color="Categoria",
+        text="Categoria", color_discrete_sequence=px.colors.qualitative.Set2,
+        hover_data={"Costo": ":.1f", "ROI": ":.2f", "Presupuesto_M": ":.1f"}
+    )
+    fig_scatter.update_traces(textposition='top center', marker=dict(opacity=0.85))
+    fig_scatter.update_layout(
+        xaxis=dict(title="Costo por beneficiario (USD) → menor es mejor",
+                   showgrid=True, gridcolor="#EBEBEB"),
+        yaxis=dict(title="ROI social (personas/$1.000) → mayor es mejor",
+                   showgrid=True, gridcolor="#EBEBEB"),
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=420, showlegend=False, margin=dict(l=10, r=10, t=20, b=40)
+    )
+    fig_scatter.add_annotation(
+        x=stats["Costo"].min(), y=stats["ROI"].max(),
+        text="✅ Zona ideal", showarrow=False,
+        font=dict(color=VERDE, size=11), xanchor="left"
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
-GRIS_A  = '#B4B2A9'
-ROJO    = '#C81D25'
-BG_A    = '#F7F7F5'
-DARK    = '#1A202C'
-LIGHT   = '#718096'
-VERDE_A = '#276749'
+# ══════════════════════════════════════════════════════════════════════════
+# TAB 2
+# ══════════════════════════════════════════════════════════════════════════
+with tab2:
+    st.subheader("¿Dónde están los proyectos que nadie vigila?")
+    st.caption("Anomalía operativa: impacto Medio supera en retrasos al impacto Alto")
+    st.divider()
 
-tasa_alto  = imp.loc[imp['Nivel_Impacto'] == 'Alto',  'tasa'].values[0]
-tasa_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'tasa'].values[0]
-pres_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'presupuesto_M'].values[0]
+    imp = (
+        df.groupby('Nivel_Impacto')
+        .apply(lambda x: pd.Series({
+            'tasa':          round((x['Estado'] == 'Retrasado').sum() / len(x) * 100, 1),
+            'n':             len(x),
+            'presupuesto_M': round(x['Presupuesto_USD'].sum() / 1e6, 1),
+            'retrasados':    (x['Estado'] == 'Retrasado').sum()
+        }))
+        .reset_index()
+    )
+    orden = ['Alto', 'Medio', 'Bajo']
+    imp['orden'] = imp['Nivel_Impacto'].map({v: i for i, v in enumerate(orden)})
+    imp = imp.sort_values('orden').reset_index(drop=True)
 
-m1, m2, m3 = st.columns(3)
-m1.metric("Retrasos — Alto impacto",  f"{tasa_alto:.1f}%",  "referencia esperada")
-m2.metric("Retrasos — Medio impacto", f"{tasa_medio:.1f}%", f"+{tasa_medio - tasa_alto:.1f} pts ↑", delta_color="inverse")
-m3.metric("Presupuesto en riesgo",    f"USD {pres_medio:.0f}M", "proyectos de impacto Medio")
+    tasa_alto  = imp.loc[imp['Nivel_Impacto'] == 'Alto',  'tasa'].values[0]
+    tasa_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'tasa'].values[0]
+    pres_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'presupuesto_M'].values[0]
+    n_medio    = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'retrasados'].values[0]
 
-st.divider()
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Retrasos — Alto impacto",     f"{tasa_alto:.1f}%", "referencia esperada")
+    m2.metric("Retrasos — Medio impacto",    f"{tasa_medio:.1f}%",
+              f"+{tasa_medio - tasa_alto:.1f} pts sobre Alto", delta_color="inverse")
+    m3.metric("Presupuesto Medio en riesgo", f"USD {pres_medio:.0f}M",
+              f"{int(n_medio)} proyectos retrasados", delta_color="inverse")
+    st.divider()
 
-fig_anomalia, ax = plt.subplots(figsize=(10, 5.5), facecolor=BG_A)  # ← nombre distinto
-ax.set_facecolor(BG_A)
+    colores_imp = [ROJO if n == 'Medio' else GRIS for n in imp['Nivel_Impacto']]
+    fig_imp = go.Figure(go.Bar(
+        x=imp['tasa'], y=imp['Nivel_Impacto'], orientation='h',
+        marker_color=colores_imp,
+        text=[f"{v:.1f}%  ({n:.0f} proyectos)" for v, n in zip(imp['tasa'], imp['n'])],
+        textposition='outside',
+        hovertemplate="<b>Impacto %{y}</b><br>Tasa retraso: %{x:.1f}%<extra></extra>"
+    ))
+    fig_imp.add_vline(
+        x=tasa_alto, line_dash="dash", line_color=VERDE, line_width=2,
+        annotation_text=f"Referencia Alto: {tasa_alto:.1f}%",
+        annotation_position="top",
+        annotation_font_color=VERDE, annotation_font_size=11
+    )
+    fig_imp.add_annotation(
+        x=tasa_medio - 0.5, y='Medio',
+        text=f"<b>+{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
+        showarrow=True, arrowhead=2, arrowcolor=ROJO,
+        ax=-80, ay=40, font=dict(color=ROJO, size=11),
+        bgcolor="#FFF5F5", bordercolor=ROJO, borderwidth=1
+    )
+    fig_imp.update_layout(
+        title=dict(
+            text="<b>Los proyectos de impacto Medio presentan más retrasos que los de Alto</b><br>"
+                 "<sup>Una anomalía operativa: reciben menos vigilancia pese al riesgo financiero</sup>",
+            font_size=14),
+        xaxis=dict(title="% de proyectos retrasados", tickformat=".0f", ticksuffix="%",
+                   range=[0, 28], showgrid=True, gridcolor="#E2E8F0"),
+        yaxis=dict(title="Nivel de Impacto", showgrid=False),
+        plot_bgcolor="white", paper_bgcolor="white",
+        height=380, showlegend=False, margin=dict(l=10, r=80, t=80, b=40)
+    )
+    st.plotly_chart(fig_imp, use_container_width=True)
 
-colores = [ROJO if row['Nivel_Impacto'] == 'Medio' else GRIS_A for _, row in imp.iterrows()]
-bars = ax.barh(imp['Nivel_Impacto'], imp['tasa'], color=colores, height=0.5, zorder=3)
+    st.info(
+        f"**¿Qué hacer hoy?** Revisar los **{int(n_medio)} proyectos de impacto Medio retrasados** "
+        f"que concentran **USD {pres_medio:.0f}M** sin supervisión activa. "
+        "El problema no está donde todos miran — está exactamente donde nadie mira."
+    )
 
-for bar, (_, row) in zip(bars, imp.iterrows()):
-    es_anomalia = row['Nivel_Impacto'] == 'Medio'
-    ax.text(bar.get_width() + 0.45, bar.get_y() + bar.get_height() / 2,
-            f"{row['tasa']:.1f}%  ({row['n']} proyectos)",
-            va='center', ha='left',
-            fontsize=10 if es_anomalia else 9,
-            fontweight='bold' if es_anomalia else 'normal',
-            color=ROJO if es_anomalia else LIGHT)
+# ══════════════════════════════════════════════════════════════════════════
+# TAB 3
+# ══════════════════════════════════════════════════════════════════════════
+with tab3:
+    st.subheader("Explorador de proyectos")
+    st.caption("Filtra, ordena y descarga la data directamente")
+    st.divider()
 
-ax.axvline(tasa_alto, color=VERDE_A, lw=1.5, ls=(0, (4, 3)), zorder=2)
-ax.text(tasa_alto, -0.72, f'Referencia Alto\n{tasa_alto:.1f}%',
-        ha='center', va='bottom', fontsize=8.5, color=VERDE_A, fontweight='bold',
-        bbox=dict(boxstyle='round,pad=0.28', fc='#F0FFF4', ec=VERDE_A, lw=0.8))
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        estado_filtro = st.selectbox("Estado del proyecto",
+            ["Todos", "En Ejecución", "Retrasado", "Completado"])
+    with col_f2:
+        orden_col = st.selectbox("Ordenar por",
+            ["Presupuesto_USD", "Poblacion_Beneficiada", "Fecha_Inicio"])
 
-brecha = tasa_medio - tasa_alto
-ax.annotate(f'{brecha:.1f} pts\nmás que Alto',
-    xy=(tasa_medio - 1.8, 1), xytext=(tasa_medio - 3, 0.35),
-    fontsize=9, color=ROJO, fontweight='bold',
-    arrowprops=dict(arrowstyle='-|>', color=ROJO, lw=1.4, shrinkA=5, shrinkB=5),
-    bbox=dict(boxstyle='round,pad=0.45', fc='#FFF5F5', ec=ROJO, lw=1), ha='center')
+    df_tabla = df.copy()
+    if estado_filtro != "Todos":
+        df_tabla = df_tabla[df_tabla["Estado"] == estado_filtro]
+    df_tabla = df_tabla.sort_values(orden_col, ascending=False)
 
-ax.text(0.98, 0.06, f'USD {pres_medio:.0f}M comprometidos\nen proyectos de impacto Medio',
-    transform=ax.transAxes, ha='right', fontsize=8.5, color=ROJO, style='italic',
-    bbox=dict(boxstyle='round,pad=0.35', fc='#FFF5F5', ec=ROJO, lw=0.8))
+    cols_mostrar = ["ID_Proyecto", "Categoria", "Region",
+                    "Nivel_Impacto", "Estado", "Presupuesto_USD", "Poblacion_Beneficiada"]
 
-ax.spines[['top', 'right']].set_visible(False)
-ax.spines['left'].set_color('#D1D5DB')
-ax.spines['bottom'].set_color('#D1D5DB')
-ax.tick_params(left=False, bottom=True, colors=LIGHT)
-ax.set_xlim(0, 30)
-ax.set_ylim(2.6, -0.8)
-ax.set_xticks([0, 5, 10, 15, 20, 25, 30])
-ax.set_xticklabels(['0%', '5%', '10%', '15%', '20%', '25%', '30%'], fontsize=8.5, color=LIGHT)
-ax.set_yticks(range(len(imp)))
-ax.set_yticklabels(imp['Nivel_Impacto'], fontsize=11, color=DARK, fontweight='bold')
-ax.xaxis.grid(True, color='#E2E8F0', lw=0.8, linestyle='--', zorder=0)
-ax.set_xlabel('% de proyectos retrasados', fontsize=9, color=LIGHT, labelpad=10)
-ax.set_ylabel('Nivel de Impacto', fontsize=9, color=LIGHT, labelpad=10)
-fig_anomalia.suptitle(
-    'Los proyectos de impacto Medio presentan más retrasos que los de Alto impacto',
-    fontsize=13, fontweight='bold', color=DARK, y=0.96)
-fig_anomalia.text(0.5, 0.91,
-    'Una anomalía operativa: reciben menos vigilancia pese al riesgo financiero asociado',
-    ha='center', fontsize=9, color=LIGHT, style='italic')
-plt.tight_layout(rect=[0, 0, 1, 0.88])
+    st.dataframe(
+        df_tabla[cols_mostrar].reset_index(drop=True),
+        use_container_width=True, height=420,
+        column_config={
+            "Presupuesto_USD": st.column_config.NumberColumn("Presupuesto USD", format="$ %,.0f"),
+            "Poblacion_Beneficiada": st.column_config.NumberColumn("Población Beneficiada", format="%,.0f"),
+        }
+    )
+    st.caption(f"{len(df_tabla):,} proyectos mostrados")
 
-st.pyplot(fig_anomalia)  # ← figura correcta
-st.divider()
-st.divider()
+    csv = df_tabla[cols_mostrar].to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="⬇️  Descargar tabla como CSV",
+        data=csv, file_name="proyectos_filtrados.csv", mime="text/csv"
+    )
