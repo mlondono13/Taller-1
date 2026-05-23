@@ -196,7 +196,7 @@ with tab2:
     m1, m2, m3 = st.columns(3)
     m1.metric("Retrasos — Alto impacto",     f"{tasa_alto:.1f}%", "referencia esperada")
     m2.metric("Retrasos — Medio impacto",    f"{tasa_medio:.1f}%",
-              f"+{tasa_medio - tasa_alto:.1f} pts sobre Alto", delta_color="inverse")
+              f"{tasa_medio - tasa_alto:.1f} pts sobre Alto", delta_color="inverse")
     m3.metric("Presupuesto Medio en riesgo", f"USD {pres_medio:.0f}M",
               f"{int(n_medio)} proyectos retrasados", delta_color="inverse")
     st.divider()
@@ -217,7 +217,7 @@ with tab2:
     )
     fig_imp.add_annotation(
         x=tasa_medio - 0.5, y='Medio',
-        text=f"<b>+{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
+        text=f"<b>{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
         showarrow=True, arrowhead=2, arrowcolor=ROJO,
         ax=-80, ay=40, font=dict(color=ROJO, size=11),
         bgcolor="#FFF5F5", bordercolor=ROJO, borderwidth=1
@@ -411,7 +411,7 @@ with tab4:
         )
         fig_d2.add_annotation(
             x=tasa_medio2 - 0.5, y='Medio',
-            text=f"<b>+{tasa_medio2 - tasa_alto2:.1f} pts sobre Alto</b>",
+            text=f"<b>{tasa_medio2 - tasa_alto2:.1f} pts sobre Alto</b>",
             showarrow=True, arrowhead=2, arrowcolor="#C81D25",
             ax=-90, ay=35, font=dict(color="#C81D25", size=10),
             bgcolor="#FFF5F5", bordercolor="#C81D25", borderwidth=1
@@ -432,7 +432,7 @@ with tab4:
 |----------|-------|---------|---------------|
 | **Color** | Azul uniforme | Rojo en Medio, gris en el resto | Contraste Figura/Fondo — la anomalía es la figura, el contexto es el fondo |
 | **Línea de referencia** | No existe | Línea verde punteada en tasa del Alto | Permite medir la brecha visualmente sin calcular |
-| **Anotación** | No existe | "+6 pts sobre Alto" con flecha | El insight está escrito en la gráfica — no hay que interpretarlo |
+| **Anotación** | No existe | "6 pts sobre Alto" con flecha | El insight está escrito en la gráfica — no hay que interpretarlo |
 | **Ordenación** | Alfabética | Alto → Medio → Bajo (narrativa) | El ojo llega a Medio después de ver que Alto es el mejor, construyendo la sorpresa |
 | **Título** | Neutro | "La anomalía que nadie vigila" | Comunica urgencia y acción, no solo descripción |
         """)
@@ -495,8 +495,3 @@ with tab4:
 """, unsafe_allow_html=True)
  
     st.divider()
-    st.markdown("### Principios aplicados")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Data-to-Ink Ratio", "Maximizado", "Ejes y bordes eliminados")
-    c2.metric("Color selectivo", "1 categoría destacada", "Por gráfica")
-    c3.metric("Anotaciones", "Insight en la gráfica", "No en el texto externo")
