@@ -411,7 +411,7 @@ with tab4:
         )
         fig_d2.add_annotation(
             x=tasa_medio2 - 0.5, y='Medio',
-            text=f"<b>+{tasa_medio2 - tasa_alto2:.1f} pts sobre Alto</b>",
+            text=f"<b>{tasa_medio2 - tasa_alto2:.1f} pts sobre Alto</b>",
             showarrow=True, arrowhead=2, arrowcolor="#C81D25",
             ax=-90, ay=35, font=dict(color="#C81D25", size=10),
             bgcolor="#FFF5F5", bordercolor="#C81D25", borderwidth=1
