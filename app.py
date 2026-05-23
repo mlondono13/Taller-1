@@ -137,30 +137,6 @@ with tab1:
         st.plotly_chart(fig_costo, use_container_width=True)
  
     st.divider()
-    st.subheader("Mapa de eficiencia por categoría")
-    st.caption("Hover sobre cada burbuja · Tamaño = presupuesto total")
- 
-    stats["Presupuesto_M"] = stats["Presupuesto_USD"] / 1e6
-    fig_scatter = px.scatter(
-        stats, x="Costo", y="ROI", size="Presupuesto_M", color="Categoria",
-        text="Categoria", color_discrete_sequence=px.colors.qualitative.Set2,
-        hover_data={"Costo": ":.1f", "ROI": ":.2f", "Presupuesto_M": ":.1f"}
-    )
-    fig_scatter.update_traces(textposition='top center', marker=dict(opacity=0.85))
-    fig_scatter.update_layout(
-        xaxis=dict(title="Costo por beneficiario (USD) → menor es mejor",
-                   showgrid=True, gridcolor="#EBEBEB"),
-        yaxis=dict(title="ROI social (personas/$1.000) → mayor es mejor",
-                   showgrid=True, gridcolor="#EBEBEB"),
-        plot_bgcolor="white", paper_bgcolor="white",
-        height=420, showlegend=False, margin=dict(l=10, r=10, t=20, b=40)
-    )
-    fig_scatter.add_annotation(
-        x=stats["Costo"].min(), y=stats["ROI"].max(),
-        text="Zona ideal", showarrow=False,
-        font=dict(color=VERDE, size=11), xanchor="left"
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
  
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 2
