@@ -119,8 +119,8 @@ with tab1:
             hovertemplate="<b>%{y}</b><br>ROI: %{x:.2f} personas/$1.000<extra></extra>"
         ))
         fig_roi.update_layout(
-            title=dict(text=f"<b>{cat_mejor_roi}: más personas por dólar invertido</b>", font_size=14),
-            xaxis=dict(title="Personas por $1.000", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
+            title=dict(text=f"<b>{cat_mejor_roi}: más personas por cada mil dólares invertidos</b>", font_size=14),
+            xaxis=dict(title="Personas por USD $1.000", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
             yaxis=dict(showgrid=False),
             plot_bgcolor="white", paper_bgcolor="white",
             margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
