@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-
+ 
 st.set_page_config(
     page_title="Taller Visualización · Unidad 1",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+ 
 st.markdown("""
 <style>
     .block-container { padding-top: 1.5rem; }
@@ -28,20 +28,20 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
+ 
 VERDE   = "#1D9E75"
 NARANJA = "#D85A30"
 ROJO    = "#C81D25"
 GRIS    = "#B4B2A9"
-
+ 
 @st.cache_data
 def cargar_datos():
     df = pd.read_csv('dataset_evaluacion_unidad1.csv')
     df['Fecha_Inicio'] = pd.to_datetime(df['Fecha_Inicio'])
     return df
-
+ 
 df_original = cargar_datos()
-
+ 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("Filtros")
@@ -56,18 +56,18 @@ with st.sidebar:
         options=["Alto", "Medio", "Bajo"], default=["Alto", "Medio", "Bajo"])
     st.divider()
     st.caption("Taller Visualización de Datos · Unidad 1")
-
+ 
 df = df_original[
     df_original["Categoria"].isin(categorias) &
     df_original["Region"].isin(regiones) &
     df_original["Nivel_Impacto"].isin(impactos)
 ]
-
+ 
 # ── Header + KPIs ──────────────────────────────────────────────────────────
 st.title("📊 Dashboard · Análisis de Proyectos Nacionales")
 st.caption(f"Mostrando {len(df):,} de {len(df_original):,} proyectos según filtros activos")
 st.divider()
-
+ 
 retrasados = df[df['Estado'] == 'Retrasado']
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Total proyectos",       f"{len(df):,}")
@@ -76,7 +76,7 @@ k3.metric("Proyectos retrasados",  f"{len(retrasados):,}",
           f"{len(retrasados)/len(df)*100:.1f}% del total", delta_color="inverse")
 k4.metric("Población beneficiada", f"{df['Poblacion_Beneficiada'].sum()/1e6:.1f}M personas")
 st.divider()
-
+ 
 # ── Tabs ───────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs([
     "📈  Eficiencia por Categoría",
@@ -84,7 +84,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🔍  Explorador de Proyectos",
     "🎨  Fase 2: Antes vs. Después"
 ])
-
+ 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 1
 # ══════════════════════════════════════════════════════════════════════════
@@ -92,14 +92,14 @@ with tab1:
     st.subheader("¿Cuál categoría entrega más con menos?")
     st.caption("Eficiencia social del portafolio · ROI y Costo por beneficiario")
     st.divider()
-
+ 
     stats = (df.groupby("Categoria")[["Presupuesto_USD", "Poblacion_Beneficiada"]]
                .sum().reset_index())
     stats["ROI"]   = stats["Poblacion_Beneficiada"] / stats["Presupuesto_USD"] * 1000
     stats["Costo"] = stats["Presupuesto_USD"] / stats["Poblacion_Beneficiada"]
-
+ 
     col_a, col_b = st.columns(2)
-
+ 
     with col_a:
         roi = stats.sort_values("ROI", ascending=True)
         roi["color"] = [VERDE if v == roi["ROI"].max() else GRIS for v in roi["ROI"]]
@@ -117,7 +117,7 @@ with tab1:
             margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
         )
         st.plotly_chart(fig_roi, use_container_width=True)
-
+ 
     with col_b:
         costo = stats.sort_values("Costo", ascending=True)
         costo["color"] = [NARANJA if v == costo["Costo"].max() else GRIS for v in costo["Costo"]]
@@ -135,11 +135,11 @@ with tab1:
             margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
         )
         st.plotly_chart(fig_costo, use_container_width=True)
-
+ 
     st.divider()
     st.subheader("Mapa de eficiencia por categoría")
     st.caption("Hover sobre cada burbuja · Tamaño = presupuesto total")
-
+ 
     stats["Presupuesto_M"] = stats["Presupuesto_USD"] / 1e6
     fig_scatter = px.scatter(
         stats, x="Costo", y="ROI", size="Presupuesto_M", color="Categoria",
@@ -161,7 +161,7 @@ with tab1:
         font=dict(color=VERDE, size=11), xanchor="left"
     )
     st.plotly_chart(fig_scatter, use_container_width=True)
-
+ 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 2
 # ══════════════════════════════════════════════════════════════════════════
@@ -169,7 +169,7 @@ with tab2:
     st.subheader("¿Dónde están los proyectos que nadie vigila?")
     st.caption("Anomalía operativa: impacto Medio supera en retrasos al impacto Alto")
     st.divider()
-
+ 
     imp = (
         df.groupby('Nivel_Impacto')
         .apply(lambda x: pd.Series({
@@ -183,16 +183,16 @@ with tab2:
     orden = ['Alto', 'Medio', 'Bajo']
     imp['orden'] = imp['Nivel_Impacto'].map({v: i for i, v in enumerate(orden)})
     imp = imp.sort_values('orden').reset_index(drop=True)
-
+ 
     if 'Alto' not in imp['Nivel_Impacto'].values or 'Medio' not in imp['Nivel_Impacto'].values:
         st.warning("⚠️ Esta visualización requiere tener seleccionados los niveles **Alto** y **Medio**. Actívalos en el filtro del sidebar.")
         st.stop()
-
+ 
     tasa_alto  = imp.loc[imp['Nivel_Impacto'] == 'Alto',  'tasa'].values[0]
     tasa_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'tasa'].values[0]
     pres_medio = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'presupuesto_M'].values[0]
     n_medio    = imp.loc[imp['Nivel_Impacto'] == 'Medio', 'retrasados'].values[0]
-
+ 
     m1, m2, m3 = st.columns(3)
     m1.metric("Retrasos — Alto impacto",     f"{tasa_alto:.1f}%", "referencia esperada")
     m2.metric("Retrasos — Medio impacto",    f"{tasa_medio:.1f}%",
@@ -200,7 +200,7 @@ with tab2:
     m3.metric("Presupuesto Medio en riesgo", f"USD {pres_medio:.0f}M",
               f"{int(n_medio)} proyectos retrasados", delta_color="inverse")
     st.divider()
-
+ 
     colores_imp = [ROJO if n == 'Medio' else GRIS for n in imp['Nivel_Impacto']]
     fig_imp = go.Figure(go.Bar(
         x=imp['tasa'], y=imp['Nivel_Impacto'], orientation='h',
@@ -217,7 +217,7 @@ with tab2:
     )
     fig_imp.add_annotation(
         x=tasa_medio - 0.5, y='Medio',
-        text=f"<b>{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
+        text=f"<b>+{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
         showarrow=True, arrowhead=2, arrowcolor=ROJO,
         ax=-80, ay=40, font=dict(color=ROJO, size=11),
         bgcolor="#FFF5F5", bordercolor=ROJO, borderwidth=1
@@ -234,13 +234,13 @@ with tab2:
         height=380, showlegend=False, margin=dict(l=10, r=80, t=80, b=40)
     )
     st.plotly_chart(fig_imp, use_container_width=True)
-
+ 
     st.info(
         f"**¿Qué hacer hoy?** Revisar los **{int(n_medio)} proyectos de impacto Medio retrasados** "
         f"que concentran **USD {pres_medio:.0f}M** sin supervisión activa. "
         "El problema no está donde todos miran — está exactamente donde nadie mira."
     )
-
+ 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 3
 # ══════════════════════════════════════════════════════════════════════════
@@ -248,7 +248,7 @@ with tab3:
     st.subheader("Explorador de proyectos")
     st.caption("Filtra, ordena y descarga la data directamente")
     st.divider()
-
+ 
     col_f1, col_f2 = st.columns(2)
     with col_f1:
         estado_filtro = st.selectbox("Estado del proyecto",
@@ -256,15 +256,15 @@ with tab3:
     with col_f2:
         orden_col = st.selectbox("Ordenar por",
             ["Presupuesto_USD", "Poblacion_Beneficiada", "Fecha_Inicio"])
-
+ 
     df_tabla = df.copy()
     if estado_filtro != "Todos":
         df_tabla = df_tabla[df_tabla["Estado"] == estado_filtro]
     df_tabla = df_tabla.sort_values(orden_col, ascending=False)
-
+ 
     cols_mostrar = ["ID_Proyecto", "Categoria", "Region",
                     "Nivel_Impacto", "Estado", "Presupuesto_USD", "Poblacion_Beneficiada"]
-
+ 
     st.dataframe(
         df_tabla[cols_mostrar].reset_index(drop=True),
         use_container_width=True, height=420,
@@ -274,13 +274,13 @@ with tab3:
         }
     )
     st.caption(f"{len(df_tabla):,} proyectos mostrados")
-
+ 
     csv = df_tabla[cols_mostrar].to_csv(index=False).encode('utf-8')
     st.download_button(
         label="Descargar tabla como CSV",
         data=csv, file_name="proyectos_filtrados.csv", mime="text/csv"
     )
-
+ 
 # ══════════════════════════════════════════════════════════════════════════
 # TAB 4 — FASE 2: ANTES VS DESPUÉS
 # ══════════════════════════════════════════════════════════════════════════
@@ -288,21 +288,21 @@ with tab4:
     st.subheader("Fase 2: Composición del Mensaje")
     st.caption("Transformación de gráficas exploratorias en argumentos visuales aclaratorios")
     st.divider()
-
+ 
     # ── COMPARATIVA 1 ──────────────────────────────────────────────────────
     st.markdown("### Comparativa 1 — Eficiencia por Categoría")
     st.markdown(
         "**Pregunta respondida:** ¿Qué categoría genera más impacto social por dólar invertido?"
     )
-
+ 
     antes1, despues1 = st.columns(2)
-
+ 
     with antes1:
         st.markdown("#### ANTES — Gráfica exploratoria")
         stats2 = df.groupby("Categoria")[["Presupuesto_USD","Poblacion_Beneficiada"]].sum().reset_index()
         stats2["ROI"] = stats2["Poblacion_Beneficiada"] / stats2["Presupuesto_USD"] * 1000
         roi_exp = stats2.sort_values("ROI", ascending=True)
-
+ 
         fig_a1 = go.Figure(go.Bar(
             x=roi_exp["ROI"], y=roi_exp["Categoria"], orientation='h',
             marker_color='steelblue',
@@ -316,14 +316,14 @@ with tab4:
             height=320, showlegend=False, margin=dict(l=10, r=60, t=40, b=30)
         )
         st.plotly_chart(fig_a1, use_container_width=True)
-
+ 
         st.info("**Problema:** Todas las barras en el mismo azul. El ojo no sabe dónde ir. No hay jerarquía visual ni mensaje claro.")
-
+ 
     with despues1:
         st.markdown("#### DESPUÉS — Gráfica aclaratoria")
         roi_ac = stats2.sort_values("ROI", ascending=True)
         roi_ac["color"] = ["#1D9E75" if v == roi_ac["ROI"].max() else "#B4B2A9" for v in roi_ac["ROI"]]
-
+ 
         fig_d1 = go.Figure(go.Bar(
             x=roi_ac["ROI"], y=roi_ac["Categoria"], orientation='h',
             marker_color=roi_ac["color"],
@@ -339,7 +339,7 @@ with tab4:
         )
         st.plotly_chart(fig_d1, use_container_width=True)
         st.success("**Solución:** Color selectivo — solo Salud en verde. El eje X se mantiene para referencia. Título que comunica el hallazgo, no solo describe la variable.")
-
+ 
     # Justificación
     with st.expander("Ver justificación de decisiones visuales — Comparativa 1"):
         st.markdown("""
@@ -350,17 +350,17 @@ with tab4:
 | **Título** | Descriptivo ("ROI Social por Categoría") | Informativo ("Salud: más personas por dólar") | El título comunica el hallazgo, no la variable |
 | **Interactividad** | Estático (matplotlib) | Hover con tooltip (Plotly) | Permite explorar valores exactos sin saturar la gráfica |
         """)
-
+ 
     st.divider()
-
+ 
     # ── COMPARATIVA 2 ──────────────────────────────────────────────────────
     st.markdown("### Comparativa 2 — Detección de Anomalía")
     st.markdown(
         "**Pregunta respondida:** ¿En qué segmento del portafolio se concentran los retrasos de forma inesperada?"
     )
-
+ 
     antes2, despues2 = st.columns(2)
-
+ 
     imp2 = (
         df.groupby('Nivel_Impacto')
         .apply(lambda x: pd.Series({
@@ -373,7 +373,7 @@ with tab4:
     orden2 = ['Alto', 'Medio', 'Bajo']
     imp2['orden'] = imp2['Nivel_Impacto'].map({v: i for i, v in enumerate(orden2)})
     imp2 = imp2.sort_values('orden').reset_index(drop=True)
-
+ 
     with antes2:
         st.markdown("#### ANTES — Sin contraste")
         fig_a2 = go.Figure(go.Bar(
@@ -390,13 +390,13 @@ with tab4:
         )
         st.plotly_chart(fig_a2, use_container_width=True)
         st.info("**Problema:** Todas las barras iguales. La anomalía existe pero es invisible. El espectador no sabe si debe preocuparse.")
-
+ 
     with despues2:
         st.markdown("#### DESPUÉS — Figura / Fondo")
         colores2 = ["#C81D25" if n == 'Medio' else "#B4B2A9" for n in imp2['Nivel_Impacto']]
         tasa_alto2 = imp2.loc[imp2['Nivel_Impacto'] == 'Alto', 'tasa'].values[0]
         tasa_medio2 = imp2.loc[imp2['Nivel_Impacto'] == 'Medio', 'tasa'].values[0]
-
+ 
         fig_d2 = go.Figure(go.Bar(
             x=imp2['tasa'], y=imp2['Nivel_Impacto'], orientation='h',
             marker_color=colores2, width=0.5,
@@ -411,7 +411,7 @@ with tab4:
         )
         fig_d2.add_annotation(
             x=tasa_medio2 - 0.5, y='Medio',
-            text=f"<b>{tasa_medio2 - tasa_alto2:.1f} pts sobre Alto</b>",
+            text=f"<b>+{tasa_medio2 - tasa_alto2:.1f} pts sobre Alto</b>",
             showarrow=True, arrowhead=2, arrowcolor="#C81D25",
             ax=-90, ay=35, font=dict(color="#C81D25", size=10),
             bgcolor="#FFF5F5", bordercolor="#C81D25", borderwidth=1
@@ -425,7 +425,7 @@ with tab4:
         )
         st.plotly_chart(fig_d2, use_container_width=True)
         st.success("**Solución:** Rojo solo en Medio. Línea de referencia verde marca lo esperado. Anotación con la brecha exacta. El insight está escrito en la gráfica.")
-
+ 
     with st.expander("Ver justificación de decisiones visuales — Comparativa 2"):
         st.markdown("""
 | Decisión | Antes | Después | Justificación |
@@ -436,7 +436,64 @@ with tab4:
 | **Ordenación** | Alfabética | Alto → Medio → Bajo (narrativa) | El ojo llega a Medio después de ver que Alto es el mejor, construyendo la sorpresa |
 | **Título** | Neutro | "La anomalía que nadie vigila" | Comunica urgencia y acción, no solo descripción |
         """)
-
+ 
+    st.divider()
+ 
+    # ── MENSAJE PARA LA GERENCIA ───────────────────────────────────────────
+    st.markdown("### Mensaje para la Gerencia")
+    st.markdown("""
+<div style="background:#1A202C; border-radius:12px; padding:2rem 2.5rem; margin-bottom:1rem;">
+    <p style="color:#F7F7F5; font-size:1.05rem; line-height:1.8; margin:0;">
+        <span style="color:#1D9E75; font-size:1.3rem; font-weight:800;">
+            ¿Estamos invirtiendo donde más impacto generamos?
+        </span><br><br>
+        <strong style="color:#F7F7F5;">La respuesta corta es: en parte, sí. Pero hay un punto ciego que nos está costando USD 807 millones.</strong>
+        <br><br>
+        El análisis del portafolio revela que <strong style="color:#1D9E75;">Salud es nuestra categoría más eficiente</strong> —
+        genera 33 personas beneficiadas por cada mil dólares invertidos, casi el doble que Tecnología.
+        Esto no es un accidente: es el resultado de proyectos bien dimensionados con alto alcance comunitario.
+        <strong style="color:#1D9E75;">Cada peso adicional en Salud tiene el mayor retorno social del portafolio.</strong>
+        <br><br>
+        Pero hay una anomalía que los reportes tradicionales no muestran:
+        <strong style="color:#C81D25;">los proyectos de impacto Medio — que concentran el 56% del presupuesto total —
+        tienen la mayor tasa de retrasos del portafolio (19.2%), superando incluso a los proyectos de alto impacto (13.2%).</strong>
+        Esto va contra toda intuición. La razón es operativa: los proyectos críticos reciben
+        supervisión constante, los de impacto medio no. Están en un punto ciego.
+        <br><br>
+        <strong style="color:#F7F7F5;">La oportunidad no requiere más presupuesto. Requiere dirigir la atención correctamente.</strong>
+    </p>
+</div>
+""", unsafe_allow_html=True)
+ 
+    col_rec1, col_rec2 = st.columns(2)
+    with col_rec1:
+        st.markdown("""
+<div style="background:#F0FFF4; border-left:4px solid #1D9E75; border-radius:6px; padding:1.2rem 1.5rem;">
+    <p style="color:#276749; font-weight:800; font-size:1rem; margin:0 0 0.5rem 0;">
+        ACCION 1 — Priorizar Salud
+    </p>
+    <p style="color:#1A202C; font-size:0.92rem; margin:0; line-height:1.6;">
+        En la próxima ronda de asignación presupuestal, incrementar el peso relativo de proyectos
+        de Salud. El ROI social de 33 personas por $1,000 justifica la decisión con datos —
+        no con intuición.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+ 
+    with col_rec2:
+        st.markdown("""
+<div style="background:#FFF5F5; border-left:4px solid #C81D25; border-radius:6px; padding:1.2rem 1.5rem;">
+    <p style="color:#C81D25; font-weight:800; font-size:1rem; margin:0 0 0.5rem 0;">
+        ACCION 2 — Intervenir el punto ciego
+    </p>
+    <p style="color:#1A202C; font-size:0.92rem; margin:0; line-height:1.6;">
+        Implementar seguimiento quincenal para los <strong>51 proyectos de impacto Medio
+        actualmente retrasados</strong>. Reducir su tasa al nivel del Alto impacto (13.2%)
+        liberaría presupuesto equivalente a 3 proyectos nuevos de Salud.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+ 
     st.divider()
     st.markdown("### Principios aplicados")
     c1, c2, c3 = st.columns(3)
