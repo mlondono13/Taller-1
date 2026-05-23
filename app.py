@@ -217,7 +217,7 @@ with tab2:
     )
     fig_imp.add_annotation(
         x=tasa_medio - 0.5, y='Medio',
-        text=f"<b>+{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
+        text=f"<b>{tasa_medio - tasa_alto:.1f} pts<br>sobre Alto</b>",
         showarrow=True, arrowhead=2, arrowcolor=ROJO,
         ax=-80, ay=40, font=dict(color=ROJO, size=11),
         bgcolor="#FFF5F5", bordercolor=ROJO, borderwidth=1
