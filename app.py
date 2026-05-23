@@ -196,8 +196,8 @@ with tab2:
     fig_imp = go.Figure(go.Bar(
         x=imp['tasa'], y=imp['Nivel_Impacto'], orientation='h',
         marker_color=colores_imp,
-        text=[f"{v:.1f}%  ({int(r)} de {int(n)} proyectos · USD {p:.0f}M parados)"
-              for v, n, r, p in zip(imp['tasa'], imp['n'], imp['retrasados'], imp['presupuesto_ret_M'])],
+        text=[f"{v:.1f}%  ({int(r)} de {int(n)} proyectos)"
+              for v, n, r in zip(imp['tasa'], imp['n'], imp['retrasados'])],
         textposition='outside',
         hovertemplate="<b>Impacto %{y}</b><br>Tasa retraso: %{x:.1f}%<extra></extra>"
     ))
@@ -402,8 +402,8 @@ with tab4:
             fig_d2 = go.Figure(go.Bar(
                 x=imp2['tasa'], y=imp2['Nivel_Impacto'], orientation='h',
                 marker_color=colores2, width=0.5,
-                text=[f"{v:.1f}%  ({int(r)} de {int(n)} · USD {p:.0f}M parados)"
-                      for v, n, r, p in zip(imp2['tasa'], imp2['n'], imp2['retrasados'], imp2['pres_ret_M'])],
+                text=[f"{v:.1f}%  ({int(r)} de {int(n)} proyectos)"
+                      for v, n, r in zip(imp2['tasa'], imp2['n'], imp2['retrasados'])],
                 textposition='outside',
                 hovertemplate="<b>Impacto %{y}</b><br>%{x:.1f}% retrasados<extra></extra>"
             ))
