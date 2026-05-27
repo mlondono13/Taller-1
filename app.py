@@ -83,7 +83,6 @@ stats = (df.groupby("Categoria")[["Presupuesto_USD", "Poblacion_Beneficiada"]]
 stats["ROI"]   = stats["Poblacion_Beneficiada"] / stats["Presupuesto_USD"] * 1000
 stats["Costo"] = stats["Presupuesto_USD"] / stats["Poblacion_Beneficiada"]
 
-# Categoría con mayor ROI y mayor Costo (dinámico según filtros)
 cat_mejor_roi   = stats.loc[stats["ROI"].idxmax(),   "Categoria"]
 cat_mayor_costo = stats.loc[stats["Costo"].idxmax(), "Categoria"]
 val_mejor_roi   = stats["ROI"].max()
@@ -100,55 +99,55 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 1
+# TAB 1 — gráficas apiladas verticalmente
 # ══════════════════════════════════════════════════════════════════════════
 with tab1:
     st.subheader("¿Cuál categoría entrega más con menos?")
     st.caption("Eficiencia social del portafolio · ROI y Costo por beneficiario")
     st.divider()
 
-    col_a, col_b = st.columns(2)
+    # ── Gráfica 1: ROI (verde para el mejor) ──────────────────────────────
+    roi = stats.sort_values("ROI", ascending=True)
+    roi["color"] = [VERDE if v == roi["ROI"].max() else GRIS for v in roi["ROI"]]
+    fig_roi = go.Figure(go.Bar(
+        x=roi["ROI"], y=roi["Categoria"], orientation='h',
+        marker_color=roi["color"],
+        text=[f"{v:.2f}" for v in roi["ROI"]], textposition='outside',
+        hovertemplate="<b>%{y}</b><br>ROI: %{x:.2f} personas/$1.000<extra></extra>"
+    ))
+    fig_roi.update_layout(
+        title=dict(text=f"<b>{cat_mejor_roi}: más personas por cada mil dólares invertidos</b>", font_size=14),
+        xaxis=dict(title="Personas por USD $1.000", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
+        yaxis=dict(showgrid=False),
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(l=10, r=60, t=50, b=40), height=320, showlegend=False
+    )
+    st.plotly_chart(fig_roi, use_container_width=True)
 
-    with col_a:
-        roi = stats.sort_values("ROI", ascending=True)
-        roi["color"] = [VERDE if v == roi["ROI"].max() else GRIS for v in roi["ROI"]]
-        fig_roi = go.Figure(go.Bar(
-            x=roi["ROI"], y=roi["Categoria"], orientation='h',
-            marker_color=roi["color"],
-            text=[f"{v:.2f}" for v in roi["ROI"]], textposition='outside',
-            hovertemplate="<b>%{y}</b><br>ROI: %{x:.2f} personas/$1.000<extra></extra>"
-        ))
-        fig_roi.update_layout(
-            title=dict(text=f"<b>{cat_mejor_roi}: más personas por cada mil dólares invertidos</b>", font_size=14),
-            xaxis=dict(title="Personas por USD $1.000", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
-            yaxis=dict(showgrid=False),
-            plot_bgcolor="white", paper_bgcolor="white",
-            margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
-        )
-        st.plotly_chart(fig_roi, use_container_width=True)
+    st.divider()
 
-    with col_b:
-        costo = stats.sort_values("Costo", ascending=True)
-        costo["color"] = [NARANJA if v == costo["Costo"].max() else GRIS for v in costo["Costo"]]
-        fig_costo = go.Figure(go.Bar(
-            x=costo["Costo"], y=costo["Categoria"], orientation='h',
-            marker_color=costo["color"],
-            text=[f"${v:.1f}" for v in costo["Costo"]], textposition='outside',
-            hovertemplate="<b>%{y}</b><br>Costo: $%{x:.1f} por persona<extra></extra>"
-        ))
-        fig_costo.update_layout(
-            title=dict(text=f"<b>{cat_mayor_costo}: mayor costo por persona beneficiada</b>", font_size=14),
-            xaxis=dict(title="USD por beneficiario", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
-            yaxis=dict(showgrid=False),
-            plot_bgcolor="white", paper_bgcolor="white",
-            margin=dict(l=10, r=60, t=50, b=40), height=350, showlegend=False
-        )
-        st.plotly_chart(fig_costo, use_container_width=True)
+    # ── Gráfica 2: Costo (naranja para el peor, diferente del verde) ───────
+    costo = stats.sort_values("Costo", ascending=True)
+    costo["color"] = [NARANJA if v == costo["Costo"].max() else GRIS for v in costo["Costo"]]
+    fig_costo = go.Figure(go.Bar(
+        x=costo["Costo"], y=costo["Categoria"], orientation='h',
+        marker_color=costo["color"],
+        text=[f"${v:.1f}" for v in costo["Costo"]], textposition='outside',
+        hovertemplate="<b>%{y}</b><br>Costo: $%{x:.1f} por persona<extra></extra>"
+    ))
+    fig_costo.update_layout(
+        title=dict(text=f"<b>{cat_mayor_costo}: mayor costo por persona beneficiada</b>", font_size=14),
+        xaxis=dict(title="USD por beneficiario", showgrid=True, gridcolor="#EBEBEB", zeroline=False),
+        yaxis=dict(showgrid=False),
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(l=10, r=60, t=50, b=40), height=320, showlegend=False
+    )
+    st.plotly_chart(fig_costo, use_container_width=True)
 
     st.divider()
 
 # ══════════════════════════════════════════════════════════════════════════
-# TAB 2
+# TAB 2 — gráfico vertical
 # ══════════════════════════════════════════════════════════════════════════
 with tab2:
     st.subheader("¿Dónde están los proyectos que nadie vigila?")
@@ -192,26 +191,28 @@ with tab2:
               f"USD {pres_ret_medio:.0f}M parados", delta_color="inverse")
     st.divider()
 
+    # ── Gráfico vertical ───────────────────────────────────────────────────
     colores_imp = [ROJO if n == 'Medio' else GRIS for n in imp['Nivel_Impacto']]
+    etiquetas   = [f"{v:.1f}%<br>({int(r)} de {int(n)})"
+                   for v, n, r in zip(imp['tasa'], imp['n'], imp['retrasados'])]
+
     fig_imp = go.Figure(go.Bar(
-        x=imp['tasa'], y=imp['Nivel_Impacto'], orientation='h',
+        x=imp['Nivel_Impacto'], y=imp['tasa'],
         marker_color=colores_imp,
-        text=[f"{v:.1f}%  ({int(r)} de {int(n)} proyectos)"
-              for v, n, r in zip(imp['tasa'], imp['n'], imp['retrasados'])],
-        textposition='outside',
-        hovertemplate="<b>Impacto %{y}</b><br>Tasa retraso: %{x:.1f}%<extra></extra>"
+        text=etiquetas, textposition='outside',
+        hovertemplate="<b>Impacto %{x}</b><br>Tasa retraso: %{y:.1f}%<extra></extra>"
     ))
-    fig_imp.add_vline(
-        x=tasa_alto, line_dash="dash", line_color=VERDE, line_width=2,
+    fig_imp.add_hline(
+        y=tasa_alto, line_dash="dash", line_color=VERDE, line_width=2,
         annotation_text=f"Referencia Alto: {tasa_alto:.1f}%",
-        annotation_position="top",
+        annotation_position="top right",
         annotation_font_color=VERDE, annotation_font_size=11
     )
     fig_imp.add_annotation(
-        x=tasa_medio - 0.5, y='Medio',
-        text=f"<b>{brecha:.1f} pts sobre Alto</b>",
+        x='Medio', y=tasa_medio,
+        text=f"<b>+{brecha:.1f} pts sobre Alto</b>",
         showarrow=True, arrowhead=2, arrowcolor=ROJO,
-        ax=-80, ay=40, font=dict(color=ROJO, size=11),
+        ax=70, ay=-70, font=dict(color=ROJO, size=11),
         bgcolor="#FFF5F5", bordercolor=ROJO, borderwidth=1
     )
     fig_imp.update_layout(
@@ -219,11 +220,11 @@ with tab2:
             text="<b>Los proyectos de impacto Medio presentan más retrasos que los de Alto</b><br>"
                  "<sup>Una anomalía operativa: reciben menos vigilancia pese al riesgo financiero</sup>",
             font_size=14),
-        xaxis=dict(title="% de proyectos retrasados", tickformat=".0f", ticksuffix="%",
-                   range=[0, 30], showgrid=True, gridcolor="#E2E8F0"),
-        yaxis=dict(title="Nivel de Impacto", showgrid=False),
+        xaxis=dict(title="Nivel de Impacto", showgrid=False),
+        yaxis=dict(title="% de proyectos retrasados", tickformat=".0f", ticksuffix="%",
+                   range=[0, max(imp['tasa']) * 1.35], showgrid=True, gridcolor="#E2E8F0"),
         plot_bgcolor="white", paper_bgcolor="white",
-        height=380, showlegend=False, margin=dict(l=10, r=280, t=80, b=40)
+        height=420, showlegend=False, margin=dict(l=40, r=40, t=90, b=40)
     )
     st.plotly_chart(fig_imp, use_container_width=True)
 
@@ -399,44 +400,47 @@ with tab4:
         with despues2:
             st.markdown("#### DESPUÉS — Figura / Fondo")
             colores2 = [ROJO if n == 'Medio' else GRIS for n in imp2['Nivel_Impacto']]
+            etiquetas2 = [f"{v:.1f}%<br>({int(r)} de {int(n)})"
+                          for v, n, r in zip(imp2['tasa'], imp2['n'], imp2['retrasados'])]
             fig_d2 = go.Figure(go.Bar(
-                x=imp2['tasa'], y=imp2['Nivel_Impacto'], orientation='h',
+                x=imp2['Nivel_Impacto'], y=imp2['tasa'],
                 marker_color=colores2, width=0.5,
-                text=[f"{v:.1f}%  ({int(r)} de {int(n)} proyectos)"
-                      for v, n, r in zip(imp2['tasa'], imp2['n'], imp2['retrasados'])],
-                textposition='outside',
-                hovertemplate="<b>Impacto %{y}</b><br>%{x:.1f}% retrasados<extra></extra>"
+                text=etiquetas2, textposition='outside',
+                hovertemplate="<b>Impacto %{x}</b><br>%{y:.1f}% retrasados<extra></extra>"
             ))
-            fig_d2.add_vline(
-                x=tasa_alto2, line_dash="dash", line_color=VERDE, line_width=2,
+            fig_d2.add_hline(
+                y=tasa_alto2, line_dash="dash", line_color=VERDE, line_width=2,
                 annotation_text=f"Referencia Alto: {tasa_alto2:.1f}%",
+                annotation_position="top right",
                 annotation_font_color=VERDE, annotation_font_size=10
             )
             fig_d2.add_annotation(
-                x=tasa_medio2 - 0.5, y='Medio',
-                text=f"<b>{brecha2:.1f} pts sobre Alto</b>",
+                x='Medio', y=tasa_medio2,
+                text=f"<b>+{brecha2:.1f} pts sobre Alto</b>",
                 showarrow=True, arrowhead=2, arrowcolor=ROJO,
-                ax=-90, ay=35, font=dict(color=ROJO, size=10),
+                ax=60, ay=-50, font=dict(color=ROJO, size=10),
                 bgcolor="#FFF5F5", bordercolor=ROJO, borderwidth=1
             )
             fig_d2.update_layout(
                 title="<b>Impacto Medio: la anomalía que nadie vigila</b>",
-                xaxis=dict(title="% retrasados", range=[0, 30], showgrid=True, gridcolor="#E2E8F0"),
-                yaxis=dict(showgrid=False),
+                xaxis=dict(title="Nivel de Impacto", showgrid=False),
+                yaxis=dict(title="% retrasados", tickformat=".0f", ticksuffix="%",
+                           range=[0, max(imp2['tasa']) * 1.4], showgrid=True, gridcolor="#E2E8F0"),
                 plot_bgcolor="white", paper_bgcolor="white",
-                height=300, showlegend=False, margin=dict(l=10, r=230, t=40, b=30)
+                height=340, showlegend=False, margin=dict(l=40, r=40, t=50, b=30)
             )
             st.plotly_chart(fig_d2, use_container_width=True)
-            st.success("**Solución:** Rojo solo en Medio. Línea de referencia. Etiqueta muestra retrasados reales y presupuesto parado.")
+            st.success("**Solución:** Rojo solo en Medio. Línea de referencia horizontal. Anotación muestra la brecha directamente.")
 
         with st.expander("Ver justificación de decisiones visuales — Comparativa 2"):
             st.markdown(f"""
 | Decisión | Antes | Después | Justificación |
 |----------|-------|---------|---------------|
 | **Color** | Azul uniforme | Rojo en Medio, gris en el resto | Contraste Figura/Fondo — la anomalía es la figura |
-| **Etiqueta** | Solo porcentaje | "X de Y proyectos · USD ZM parados" | Muestra retrasados reales, no el total del nivel |
-| **Línea de referencia** | No existe | Línea verde en tasa del Alto ({tasa_alto2:.1f}%) | Permite medir la brecha sin calcular |
-| **Anotación** | No existe | "{brecha2:.1f} pts sobre Alto" con flecha | El insight está escrito en la gráfica |
+| **Orientación** | Horizontal | Vertical | Pocos grupos (3): el eje X nominal es más natural en vertical |
+| **Etiqueta** | Solo porcentaje | "X de Y proyectos" | Muestra retrasados reales, no el total del nivel |
+| **Línea de referencia** | No existe | Línea horizontal verde en {tasa_alto2:.1f}% | Permite medir la brecha sin calcular |
+| **Anotación** | No existe | "+{brecha2:.1f} pts sobre Alto" con flecha | El insight está escrito en la gráfica |
 | **Ordenación** | Alfabética | Alto → Medio → Bajo | Construye la sorpresa narrativa |
             """)
 
