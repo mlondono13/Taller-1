@@ -545,8 +545,3 @@ with tab4:
 """, unsafe_allow_html=True)
  
     st.divider()
-    st.markdown("### Principios aplicados")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Data-to-Ink Ratio", "Maximizado", "Ejes y bordes eliminados")
-    c2.metric("Color selectivo", "1 categoría destacada", "Por gráfica")
-    c3.metric("Anotaciones", "Insight en la gráfica", "No en texto externo")
