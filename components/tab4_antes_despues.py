@@ -5,7 +5,6 @@ from utils.colores import VERDE, ROJO, GRIS
 
 def render(df, stats, meta):
     st.subheader("Fase 2: Composición del Mensaje")
-    st.caption("Transformación de gráficas exploratorias en argumentos visuales aclaratorios")
     st.divider()
 
     comparativa_1(stats, meta)

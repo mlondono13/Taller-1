@@ -69,7 +69,7 @@ st.markdown("""
         Pregunta central
     </p>
     <p style="color:#1A202C; font-size:1.25rem; font-weight:800; margin:0; line-height:1.5;">
-        ¿Estamos invirtiendo el presupuesto donde se genera el mayor impacto social —
+        ¿Estamos invirtiendo el presupuesto donde se genera el mayor impacto social
         y hay proyectos críticos que nadie está vigilando?
     </p>
 </div>

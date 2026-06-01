@@ -21,7 +21,6 @@ def calcular_impacto(df):
 
 def render(df, meta):
     st.subheader("¿Dónde están los proyectos que nadie vigila?")
-    st.caption("Anomalía operativa: impacto Medio supera en retrasos al impacto Alto")
     st.divider()
 
     imp = calcular_impacto(df)

@@ -3,7 +3,6 @@ import streamlit as st
 
 def render(df, meta):
     st.subheader("Explorador de proyectos")
-    st.caption("Filtra, ordena y descarga la data directamente")
     st.divider()
 
     col_f1, col_f2 = st.columns(2)

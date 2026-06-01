@@ -4,7 +4,6 @@ from utils.colores import VERDE, NARANJA, GRIS
 
 def render(stats, meta):
     st.subheader("¿Cuál categoría entrega más con menos?")
-    st.caption("Eficiencia social del portafolio · ROI y Costo por beneficiario")
     st.divider()
 
     grafica_roi(stats, meta)
